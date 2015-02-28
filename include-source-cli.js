@@ -18,7 +18,8 @@ var argv = require('yargs')
         },
         'i': {
         	alias: 'in-place',
-        	describe: 'Save output directly to SOURCE.'
+        	describe: 'Save output directly to SOURCE.',
+        	type:  'boolean'
         },
         'r':{
         	alias: 'remove-comments',
@@ -29,6 +30,12 @@ var argv = require('yargs')
         'stdout':{
         	describe: 'Print output to stdout.',
         	type:'boolean'
+        },
+        'w':{
+        	alias: 'watch',
+        	describe: 'Watch files for changes and update automatically.',
+        	type: 'boolean',
+        	default: false
         }
     })
     .requiresArg('o')
@@ -40,5 +47,4 @@ var argv = require('yargs')
     .argv;
 
 argv.src = argv['_'];
-debugger;
 includeSource(argv);

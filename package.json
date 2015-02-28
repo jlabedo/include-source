@@ -1,35 +1,36 @@
 {
-    "name": "include-source",
-    "version": "0.0.1",
-    "description": "Command line tool to include script and style files into your HTML files.",
-    "author": {
-        "name": "Jean de La Bédoyère",
-        "email": "jlabedo@gmail.com"
-    },
-    "homepage": "https://github.com/jlabedo/include-source",
-    "repository": {
-        "type": "git",
-        "url": "git://github.com/jlabedo/include-source.git"
-    },
-    "bugs": {
-        "url": "https://github.com/jlabedo/include-source/issues"
-    },
-    "license": "MIT",
-    "readmeFilename": "README.md",
-    "main": "include-source.js",
-    "bin": {
-        "include-source": "include-source-cli.js"
-    },
-    "dependencies": {
-        "glob": "^4.4.0",
-        "through2": "^0.6.3",
-        "yargs": "^3.3.1"
-    },
-    "scripts": {
-        "test": "mocha"
-    },
-    "devDependencies": {
-        "mock-fs": "^2.5.0",
-        "sinon": "^1.12.2"
-    }
+  "name": "include-source",
+  "version": "0.0.1",
+  "description": "Command line tool to include script and style files into your HTML files.",
+  "author": {
+    "name": "Jean de La Bédoyère",
+    "email": "jlabedo@gmail.com"
+  },
+  "homepage": "https://github.com/jlabedo/include-source",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jlabedo/include-source.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jlabedo/include-source/issues"
+  },
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "main": "include-source.js",
+  "bin": {
+    "include-source": "include-source-cli.js"
+  },
+  "dependencies": {
+    "gaze": "^0.5.1",
+    "glob": "^4.4.0",
+    "through2": "^0.6.3",
+    "yargs": "^3.3.1"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "mock-fs": "^2.5.0",
+    "sinon": "^1.12.2"
+  }
 }

@@ -3,6 +3,7 @@
 var through = require('through2'),
     glob = require('glob'),
     path = require('path'),
+    gaze = require('gaze'),
     fs = require('fs');
 
 var placeholders = {
@@ -24,8 +25,44 @@ function parseFiles(source, cwd) {
     });
 }
 
-function replaceIncludes(contents, options) {
+var watches = {};
+function addWatch(filepath, fileGlob, opts) {
+    watches[filepath].push(gaze(fileGlob, function() {
+        this.on('added', function() {
+            onEvent(filepath, opts);
+        });
+        this.on('deleted', function() {
+            onEvent(filepath, opts);
+        });
+    }));
+}
+
+function resetWatches(filepath) {
+    if (typeof watches[filepath] != 'undefined') {
+        watches[filepath].forEach(function(watch) {
+            watch.close();
+        });
+        delete watches[filepath];
+    }
+    watches[filepath] = [];
+}
+
+// TODO: Not really thread safe
+var changesBeingMade = {};
+function onEvent(filepath, opts) {
+    if (changesBeingMade[filepath] === true) {
+        return;
+    }
+    changesBeingMade[filepath] = true;
+    processSourceFiles(filepath, opts, function() {
+        changesBeingMade[filepath] = false;
+    });
+}
+
+function replaceIncludes(contents, options, filepath) {
     var cwd = options.cwd || process.cwd();
+
+    resetWatches(filepath);
 
     return contents.replace(regex, function(match, startBlock, spacing, blockType, fileGlob, oldScripts, endBlock, offset, string) {
         var placeholder = placeholders[blockType];
@@ -34,6 +71,10 @@ function replaceIncludes(contents, options) {
         var includes = spacing + files.map(function(filename) {
             return placeholder.replace('{{filename}}', filename);
         }).join('\n' + spacing);
+
+        if (options.watch) {
+            addWatch(filepath, fileGlob, options);
+        }
 
         var result = '';
         if (!options['remove-comments']) {
@@ -47,44 +88,68 @@ function replaceIncludes(contents, options) {
     });
 }
 
-var includeSource = function(opts) {
-    var src = [];
-    var streams = [];
-    var srcArr = Array.isArray(opts.src) ? opts.src : [opts.src];
-    srcArr.forEach(function(pattern) {
-        src = src.concat(glob.sync(pattern));
-    });
+function processSourceFiles(src, opts, callback) {
+    var srcList = Array.isArray(src) ? src : [src],
+        index = srcList.length,
+        streams = srcList.map(function(file) {
+            var contents = String(fs.readFileSync(file)),
+                stream = includeSource.getStream(opts, file);
 
-    src.forEach(function(file) {
-        var contents = String(fs.readFileSync(file));
-        var stream = includeSource.getStream(opts, file);
-
-        stream.write(contents);
-        stream.end();
-        streams = streams.concat(stream);
-    });
-
-    if (typeof opts.onStreamsEnd === 'function') {
-        var index = streams.length;
-        streams.forEach(function(stream) {
-            stream.once('data', function() {
+            stream.write(contents);
+            stream.end();
+            stream.once('end', function() {
                 index--;
                 if (index === 0) {
-                    opts.onStreamsEnd();
+                    if (typeof opts.onStreamsEnd === 'function') {
+                        opts.onStreamsEnd();
+                    }
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
                 }
             });
+            return stream;
         });
-    }
 
     return streams;
+}
+
+var includeSource = function(opts) {
+    var sourceWatchers = [];
+    var src = [];
+    var srcArr = Array.isArray(opts.src) ? opts.src : [opts.src];
+    srcArr.forEach(function(pattern) {
+        var srcList = glob.sync(pattern);
+        src = src.concat(srcList);
+
+        // Put watchers on source files
+        if (opts.watch) {
+            sourceWatchers.push({
+                pattern: pattern,
+                watch: gaze(pattern, function() {
+                    this.on('changed', function(filepath) {
+                        onEvent(filepath, opts);
+                    });
+                    this.on('added', function(filepath) {
+                        onEvent(filepath, opts);
+                    });
+                })
+            });
+        }
+    });
+
+    return processSourceFiles(src, opts);
 };
 
 includeSource.getStream = function(options, file) {
     var opts = options || {};
 
+    /**
+     * Stream : Replace includes in source file
+     */
     var stream = through.obj(function(obj, enc, callback) {
         try {
-            obj = replaceIncludes(obj, opts);
+            obj = replaceIncludes(obj, opts, file);
         } catch (err) {
             this.emit('error', err);
         }
@@ -93,6 +158,9 @@ includeSource.getStream = function(options, file) {
         return callback();
     });
 
+    /**
+     * Stream : Pipe to desired output
+     */
     if (opts.stdout) {
         stream.pipe(process.stdout);
     }

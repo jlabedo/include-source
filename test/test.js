@@ -13,9 +13,8 @@ function captureStream(stream) {
     var oldWrite = stream.write;
     var buf = '';
     stream.write = function(chunk, encoding, callback) {
-        debugger;
         buf += chunk.toString(); // chunk is a String or Buffer
-        // oldWrite.apply(stream, arguments);
+        oldWrite.apply(stream, arguments);
     }
 
     return {
@@ -55,7 +54,7 @@ describe('include-source', function() {
         });
 
         it('should replace the placeholder with scripts', function(done) {
-            var stream = includeSource.getStream();
+            var stream = includeSource.getStream({'remove-comments':true});
             stream.once('data', function(file) {
                 //assert(file.isBuffer());
                 assert.equal(file.toString('utf8'), '<html>\n<script src="files/file1.ext"></script>\n<script src="files/file2.ext"></script>\n</html>');
@@ -67,7 +66,7 @@ describe('include-source', function() {
         });
 
         it('should replace the placeholder with css', function(done) {
-            var stream = includeSource.getStream();
+            var stream = includeSource.getStream({'remove-comments':true});
             stream.once('data', function(file) {
                 //assert(file.isBuffer());
                 assert.equal(file.toString('utf8'), '<link rel="stylesheet" href="files/file1.ext">\n<link rel="stylesheet" href="files/file2.ext">');
@@ -101,6 +100,7 @@ describe('include-source', function() {
             includeSource({
                 stdout: true,
                 src: 'files/index.html',
+                'remove-comments':true,
                 onStreamsEnd: function() {
                     hook.unhook();
                     assert.equal(hook.captured(), '<head>\n<link rel="stylesheet" href="css/style1.css">\n<link rel="stylesheet" href="css/style2.css">\n</head>\n');
@@ -114,6 +114,7 @@ describe('include-source', function() {
             var streams = includeSource({
                 src: 'files/index.html',
                 output: '{{path}}/{{filename}}.out.{{ext}}',
+                'remove-comments':true,
                 onStreamsEnd: function() {
                     assert(fs.statSync('files/index.out.html').isFile(), 'File has not been written to fs');
                     assert.equal(String(fs.readFileSync('files/index.out.html')), '<head>\n<link rel="stylesheet" href="css/style1.css">\n<link rel="stylesheet" href="css/style2.css">\n</head>\n');
@@ -126,6 +127,7 @@ describe('include-source', function() {
             includeSource({
                 src: 'files/index.html',
                 'in-place': true,
+                'remove-comments':true,
                 onStreamsEnd: function() {
                     assert.equal(String(fs.readFileSync('files/index.html')), '<head>\n<link rel="stylesheet" href="css/style1.css">\n<link rel="stylesheet" href="css/style2.css">\n</head>\n');
                     done();
