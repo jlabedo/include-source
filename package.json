@@ -1,6 +1,6 @@
 {
   "name": "include-source",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Command line tool to include script and style files into your HTML files.",
   "author": {
     "name": "Jean de La Bédoyère",
